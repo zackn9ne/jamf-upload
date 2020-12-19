@@ -4,6 +4,7 @@ import getpass
 import json
 import plistlib
 import six
+import subprocess
 from base64 import b64encode
 
 from . import curl
@@ -41,6 +42,33 @@ def get_credentials(prefs_file):
         slack_webhook = ""
     return jamf_url, jamf_user, jamf_password, slack_webhook
 
+def get_creds_from_defaults_read_tool(thing):
+    '''eg JSS_URL'''
+    result = subprocess.run(['defaults', 'read', 'com.github.autopkg', thing], capture_output=True)
+    result = result.stdout.decode('utf-8').strip('\n')
+    return result
+
+def get_creds_from_defaults_read(thing):
+    try:
+        jamf_url = get_creds_from_defaults_read_tool('JSS_URL')
+    except NameError:
+        print('something missing in defaults read com.github.autopkg')
+    try:
+        jamf_user = get_creds_from_defaults_read_tool('API_USERNAME')
+    except NameError:
+        print('something missing in defaults read com.github.autopkg')
+    try:
+        jamf_password = get_creds_from_defaults_read_tool('API_PASSWORD')
+    except NameError:
+        print('something missing in defaults read com.github.autopkg')
+    try:
+        slack_webhook = get_creds_from_defaults_read_tool('SLACK_WEBHOOK')
+    except NameError:
+        print('something missing in defaults read com.github.autopkg')
+
+    enc_creds = encode_creds(jamf_user, jamf_password)
+
+    return jamf_url, jamf_user, jamf_password, slack_webhook, enc_creds
 
 def get_smb_credentials(prefs_file):
     """get SMB credentials from an existing AutoPkg prefs file"""

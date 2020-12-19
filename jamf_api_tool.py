@@ -56,10 +56,6 @@ def delete(id, jamf_url, enc_creds, verbosity):
         api_get.get_headers(r)
 
 
-def for_partial():
-    pass
-
-
 def get_args():
     """Parse any command line arguments"""
     parser = argparse.ArgumentParser()
@@ -140,6 +136,12 @@ def get_args():
         ),
     )
     parser.add_argument(
+        "-default",
+        action="store_true",        
+        help="get them from defaults read com.github.autopkg on your SYSTEM"
+    )
+
+    parser.add_argument(
         "-v",
         "--verbose",
         action="count",
@@ -157,6 +159,11 @@ def days_between(d1, d2):
     return abs((d2 - d1).days)
 
 
+def slack_send(slack_webhook, info):
+    data = {"text": info}
+    curl.token_based("POST", slack_webhook, data)
+
+
 def main():
     """Do the main thing here"""
     print("\n** Jamf API Tool for Jamf Pro.\n")
@@ -165,8 +172,13 @@ def main():
     args = get_args()
     verbosity = args.verbose
 
+    # grab values from defaults read if nothing specified
+    if args.default:
+        jamf_url, _, _, slack_webhook, enc_creds = api_connect.get_creds_from_defaults_read(args)
+
     # grab values from a prefs file if supplied
-    jamf_url, _, _, slack_webhook, enc_creds = api_connect.get_creds_from_args(args)
+    if args.prefs:
+        jamf_url, _, _, slack_webhook, enc_creds = api_connect.get_creds_from_args(args)
 
     if args.slack:
         if not slack_webhook:
@@ -356,10 +368,15 @@ def main():
                         print("No match found: {}".format(partial))
 
         elif args.all:
+
+
+
+            
             # assumes --policy flag due to prior exit on another style
             obj = api_get.check_api_finds_all(
                 jamf_url, "category_all", enc_creds, verbosity
             )
+            slack_send(slack_webhook, f'all {len(obj)} computers was just queried on {jamf_url}')            
 
             if obj:
                 for x in obj:

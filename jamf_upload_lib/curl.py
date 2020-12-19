@@ -7,7 +7,23 @@ import uuid
 from shutil import rmtree
 from collections import namedtuple
 
-
+def token_based(method, url, data, verbosity=0):
+    curl_cmd = [
+        "/usr/bin/curl",
+        "-X",
+        method,
+        "-H",
+        "Content-type: application/json",
+        "--data",
+        json.dumps(data),
+        url,
+    ]
+    if verbosity > 0:
+        curl_cmd.append("-v")
+        print(curl_cmd)
+    subprocess.check_output(curl_cmd)
+    
+    
 def request(method, url, auth, verbosity, data="", additional_headers=""):
     """
     build a curl command based on method (GET, PUT, POST, DELETE)
@@ -40,19 +56,6 @@ def request(method, url, auth, verbosity, data="", additional_headers=""):
     # set either Accept or Content-Type depending on method
     if method == "GET" or method == "DELETE":
         curl_cmd.extend(["--header", "Accept: application/json"])
-    elif method == "POST" and "hooks.slack.com" in url:
-        # build a Slack-centric curl command - create a webhook url on slack.com
-        # and set variable to SLACK_WEBHOOK in your prefs file
-        curl_cmd = [
-            "/usr/bin/curl",
-            "-X",
-            method,
-            "-H",
-            "Content-type: application/json",
-            "--data",
-            json.dumps(data),
-            url,
-        ]
     # icon upload requires special method
     elif method == "POST" and "fileuploads" in url:
         curl_cmd.extend(["--header", "Content-type: multipart/form-data"])
